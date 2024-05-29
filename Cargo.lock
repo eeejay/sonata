@@ -1055,7 +1055,9 @@ dependencies = [
 
 [[package]]
 name = "libtashkeel_base"
-version = "1.2.0"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1094c84063245a4460e710c8509be0cac055bac1043932f525318156db4803c"
 dependencies = [
  "libtqsm",
  "log",
@@ -1080,6 +1082,8 @@ dependencies = [
 [[package]]
 name = "libtqsm"
 version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d75927f12fec98f8ded2613f1bb4a7217c22662cf493864e79e746e5291bfb8"
 dependencies = [
  "anyhow",
  "fancy-regex",

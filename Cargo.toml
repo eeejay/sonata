@@ -16,9 +16,6 @@ members = [
     "audio-ops"
 ]
 
-[patch.crates-io]
-libtashkeel_base = { path = "./deps/libtashkeel/libtashkeel_base" }
-
 [profile.release]
 opt-level = 3
 lto = true
