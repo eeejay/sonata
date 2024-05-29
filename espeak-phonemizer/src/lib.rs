@@ -3,11 +3,9 @@ mod espeakng;
 use ffi_support::{rust_string_to_c, FfiStr};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::env;
 use std::error::Error;
 use std::ffi;
 use std::fmt;
-use std::path::PathBuf;
 
 pub type ESpeakResult<T> = Result<T, ESpeakError>;
 
@@ -16,9 +14,6 @@ const CLAUSE_INTONATION_COMMA: i32 = 0x00001000;
 const CLAUSE_INTONATION_QUESTION: i32 = 0x00002000;
 const CLAUSE_INTONATION_EXCLAMATION: i32 = 0x00003000;
 const CLAUSE_TYPE_SENTENCE: i32 = 0x00080000;
-/// Name of the environment variable that points to the directory that contains `espeak-ng-data` directory
-/// only needed if `espeak-ng-data` directory is not in the expected location (i.e. eSpeak-ng is not installed system wide)
-const SONATA_ESPEAKNG_DATA_DIRECTORY: &str = "SONATA_ESPEAKNG_DATA_DIRECTORY";
 
 #[derive(Debug, Clone)]
 pub struct ESpeakError(pub String);
@@ -34,27 +29,16 @@ impl fmt::Display for ESpeakError {
 static LANG_SWITCH_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\([^)]*\)").unwrap());
 static STRESS_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[ˈˌ]").unwrap());
 static ESPEAKNG_INIT: Lazy<ESpeakResult<()>> = Lazy::new(|| {
-    let data_dir = match env::var(SONATA_ESPEAKNG_DATA_DIRECTORY) {
-        Ok(directory) => PathBuf::from(directory),
-        Err(_) => env::current_exe().unwrap().parent().unwrap().to_path_buf(),
-    };
-    let es_data_path_ptr = if data_dir.join("espeak-ng-data").exists() {
-        rust_string_to_c(data_dir.display().to_string())
-    } else {
-        std::ptr::null()
-    };
     unsafe {
         let es_sample_rate = espeakng::espeak_Initialize(
             espeakng::espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL,
             0,
-            es_data_path_ptr,
+            std::ptr::null(),
             espeakng::espeakINITIALIZE_DONT_EXIT as i32,
         );
         if es_sample_rate <= 0 {
             Err(ESpeakError(format!(
-                "Failed to initialize eSpeak-ng. Try setting `{}` environment variable to the directory that contains the `espeak-ng-data` directory. Error code: `{}`",
-                SONATA_ESPEAKNG_DATA_DIRECTORY,
-                es_sample_rate
+                "Failed to initialize eSpeak-ng. Try setting `ESPEAK_DATA_PATH` environment variable to the directory that contains the `espeak-ng-data` directory.",
             )))
         } else {
             Ok(())
