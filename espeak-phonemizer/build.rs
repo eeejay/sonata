@@ -1,19 +1,25 @@
-use cmake;
+use autotools::Config;
 
 fn main() {
     println!("cargo:rerun-if-changed=../deps/espeak-ng/src");
     println!("cargo:rustc-link-lib=static=espeak-ng");
-    println!("cargo:rustc-link-lib=static=ucd");
-    println!("cargo:rustc-link-lib=static=ucd");
 
-    let build_dir = cmake::Config::new("../deps/espeak-ng")
-        .configure_arg("-DUSE_ASYNC:BOOL=OFF")
-        .configure_arg("-DUSE_MBROLA:BOOL=OFF")
-        .configure_arg("-DUSE_LIBSONIC:BOOL=OFF")
-        .configure_arg("-DUSE_LIBPCAUDIO:BOOL=OFF")
-        .configure_arg("-DUSE_KLATT:BOOL=OFF")
-        .configure_arg("-DUSE_SPEECHPLAYER:BOOL=OFF")
-        .configure_arg("-DBUILD_SHARED_LIBS:BOOL=OFF")
+    std::process::Command::new("sh")
+        .arg("-c")
+        .arg("cd ../deps/espeak-ng && ./autogen.sh")
+        .output()
+        .unwrap();
+
+    let build_dir = autotools::Config::new("../deps/espeak-ng")
+        .without("async", None)
+        .without("mbrola", None)
+        .without("sonic", None)
+        .without("pcaudiolib", None)
+        .without("klatt", None)
+        .without("speechplayer", None)
+        .without("speechplayer", None)
+        .disable("shared", None)
+        .insource(true)
         .build();
 
     println!(
