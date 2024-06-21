@@ -3,4 +3,5 @@
 	url = https://github.com/waywardgeek/sonic
 [submodule "deps/espeak-ng"]
 	path = deps/espeak-ng
-	url = https://github.com/rhasspy/espeak-ng
+	url = https://github.com/eeejay/espeak-ng.git
+	branch = rhasspy_main
