@@ -50,15 +50,11 @@ impl From<WaveWriterError> for SonataError {
 }
 
 /// A wrapper type that holds sentence phonemes
-pub struct Phonemes(Vec<String>);
+pub struct Phonemes(Vec<(usize, usize, String)>);
 
 impl Phonemes {
-    pub fn sentences(&self) -> &Vec<String> {
-        &self.0
-    }
-
-    pub fn to_vec(self) -> Vec<String> {
-        self.0
+    pub fn sentences(&self) -> Vec<String> {
+        self.0.clone().into_iter().map(|(_s, _e, ph)| ph).collect()
     }
 
     pub fn num_sentences(&self) -> usize {
@@ -66,18 +62,26 @@ impl Phonemes {
     }
 }
 
-impl From<Vec<String>> for Phonemes {
-    fn from(other: Vec<String>) -> Self {
+impl From<Vec<(usize, usize, String)>> for Phonemes {
+    fn from(other: Vec<(usize, usize, String)>) -> Self {
         Self(other)
     }
 }
 
 impl std::string::ToString for Phonemes {
     fn to_string(&self) -> String {
-        self.0.join(" ")
+        self.sentences().join(" ")
     }
 }
 
+impl IntoIterator for Phonemes {
+    type Item = (usize, usize, String);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 pub trait SonataModel {
     fn audio_output_info(&self) -> SonataResult<AudioInfo>;

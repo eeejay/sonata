@@ -253,11 +253,12 @@ struct SpeechSynthesisTaskProvider {
 }
 
 impl SpeechSynthesisTaskProvider {
-    fn get_phonemes(&self) -> SonataResult<Vec<String>> {
-        Ok(self.model.phonemize_text(&self.text)?.to_vec())
+    fn get_phonemes(&self) -> SonataResult<Phonemes> {
+        self.model.phonemize_text(&self.text)
     }
-    fn process_one_sentence(&self, phonemes: String) -> SonataAudioResult {
-        let wave_samples = self.model.speak_one_sentence(phonemes)?;
+    fn process_one_sentence(&self, start: usize, end: usize, phonemes: String) -> SonataAudioResult {
+        let mut wave_samples = self.model.speak_one_sentence(phonemes)?;
+        wave_samples.sentence_boundary = Some((start, end));
         match self.output_config {
             Some(ref config) => config.apply(wave_samples),
             None => Ok(wave_samples),
@@ -281,7 +282,7 @@ impl SpeechSynthesisTaskProvider {
 
 pub struct SonataSpeechStreamLazy {
     provider: SpeechSynthesisTaskProvider,
-    sentence_phonemes: std::vec::IntoIter<String>,
+    sentence_phonemes: <sonata_core::Phonemes as IntoIterator>::IntoIter,
 }
 
 impl SonataSpeechStreamLazy {
@@ -298,8 +299,8 @@ impl Iterator for SonataSpeechStreamLazy {
     type Item = SonataAudioResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let phonemes = self.sentence_phonemes.next()?;
-        match self.provider.process_one_sentence(phonemes) {
+        let (start, end, phonemes) = self.sentence_phonemes.next()?;
+        match self.provider.process_one_sentence(start, end, phonemes) {
             Ok(ws) => Some(Ok(ws)),
             Err(e) => Some(Err(e)),
         }
@@ -315,8 +316,8 @@ impl SonataSpeechStreamParallel {
     fn new(provider: SpeechSynthesisTaskProvider) -> SonataResult<Self> {
         let calculated_result: Vec<SonataAudioResult> = provider
             .get_phonemes()?
-            .par_iter()
-            .map(|ph| provider.process_one_sentence(ph.to_string()))
+            .into_iter()
+            .map(|(start, end, ph)| provider.process_one_sentence(start, end, ph))
             .collect();
         Ok(Self {
             precalculated_results: calculated_result.into_iter(),
@@ -348,7 +349,7 @@ impl RealtimeSpeechStream {
             let mut chunk_size = chunk_size;
             let chunk_factor = 1;
             let mut num_processed_chunks = 0;
-            for ph_sent in phonemes {
+            for (_start, _end, ph_sent) in phonemes {
                 chunk_size = if num_processed_chunks != 0 {
                     chunk_size  * chunk_factor * num_processed_chunks
                 } else {

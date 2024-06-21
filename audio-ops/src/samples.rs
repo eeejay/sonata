@@ -211,6 +211,7 @@ pub struct Audio {
     pub samples: AudioSamples,
     pub info: AudioInfo,
     pub inference_ms: Option<f32>,
+    pub sentence_boundary: Option<(usize, usize)>,
 }
 
 impl Audio {
@@ -223,6 +224,7 @@ impl Audio {
                 num_channels: 1,
                 sample_width: 2,
             },
+            sentence_boundary: None
         }
     }
 
