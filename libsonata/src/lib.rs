@@ -394,18 +394,18 @@ fn _do_synthesize(
     match params.mode {
         synth_mode::SYNTH_MODE_LAZY => {
             let stream = synth
-                .synthesize_lazy(text, audio_output_config)?
+                .synthesize_lazy(text, false, audio_output_config)?
                 .map(|wr| wr.map(|aud| aud.samples));
             iterate_stream(stream, params.callback)
         }
         synth_mode::SYNTH_MODE_PARALLEL => {
             let stream = synth
-                .synthesize_parallel(text, audio_output_config)?
+                .synthesize_parallel(text, false, audio_output_config)?
                 .map(|wr| wr.map(|aud| aud.samples));
             iterate_stream(stream, params.callback)
         }
         synth_mode::SYNTH_MODE_REALTIME => {
-            let stream = synth.synthesize_streamed(text, audio_output_config, 72, 3)?;
+            let stream = synth.synthesize_streamed(text, false, audio_output_config, 72, 3)?;
             iterate_stream(stream, params.callback)
         }
         _ => Err(SonataFFIError::invalid_synthesis_mode())

@@ -85,7 +85,7 @@ impl IntoIterator for Phonemes {
 
 pub trait SonataModel {
     fn audio_output_info(&self) -> SonataResult<AudioInfo>;
-    fn phonemize_text(&self, text: &str) -> SonataResult<Phonemes>;
+    fn phonemize_text(&self, text: &str, is_ssml: bool) -> SonataResult<Phonemes>;
     fn speak_batch(&self, phoneme_batches: Vec<String>) -> SonataResult<Vec<Audio>>;
     fn speak_one_sentence(&self, phonemes: String) -> SonataAudioResult;
 
@@ -133,4 +133,3 @@ pub trait SonataModel {
             ))
     }
 }
-

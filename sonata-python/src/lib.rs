@@ -430,6 +430,7 @@ pub fn phonemize_text(
     match espeak_phonemizer::text_to_phonemes(
         &text,
         language,
+        false,
         phoneme_separator.or(None),
         remove_lang_switch_flags.unwrap_or(true),
         remove_stress.unwrap_or(false)

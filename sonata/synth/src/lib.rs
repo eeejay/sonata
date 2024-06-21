@@ -3,7 +3,6 @@ pub use sonata_core::*;
 
 use flume::{Receiver, SendError, Sender};
 use once_cell::sync::Lazy;
-use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::any::Any;
 use std::collections::HashMap;
@@ -126,11 +125,13 @@ impl SonataSpeechSynthesizer {
     fn create_synthesis_task_provider(
         &self,
         text: String,
+        is_ssml: bool,
         output_config: Option<AudioOutputConfig>,
     ) -> SpeechSynthesisTaskProvider {
         SpeechSynthesisTaskProvider {
             model: self.clone_model(),
             text,
+            is_ssml,
             output_config,
         }
     }
@@ -138,25 +139,28 @@ impl SonataSpeechSynthesizer {
     pub fn synthesize_lazy(
         &self,
         text: String,
+        is_ssml: bool,
         output_config: Option<AudioOutputConfig>,
     ) -> SonataResult<SonataSpeechStreamLazy> {
-        SonataSpeechStreamLazy::new(self.create_synthesis_task_provider(text, output_config))
+        SonataSpeechStreamLazy::new(self.create_synthesis_task_provider(text, is_ssml, output_config))
     }
     pub fn synthesize_parallel(
         &self,
         text: String,
+        is_ssml: bool,
         output_config: Option<AudioOutputConfig>,
     ) -> SonataResult<SonataSpeechStreamParallel> {
-        SonataSpeechStreamParallel::new(self.create_synthesis_task_provider(text, output_config))
+        SonataSpeechStreamParallel::new(self.create_synthesis_task_provider(text, is_ssml, output_config))
     }
     pub fn synthesize_streamed(
         &self,
         text: String,
+        is_ssml: bool,
         output_config: Option<AudioOutputConfig>,
         chunk_size: usize,
         chunk_padding: usize,
     ) -> SonataResult<RealtimeSpeechStream> {
-        let provider = self.create_synthesis_task_provider(text, output_config);
+        let provider = self.create_synthesis_task_provider(text, is_ssml, output_config);
         let wavinfo = self.0.audio_output_info()?;
         RealtimeSpeechStream::new(
             provider,
@@ -174,7 +178,7 @@ impl SonataSpeechSynthesizer {
         output_config: Option<AudioOutputConfig>,
     ) -> SonataResult<()> {
         let mut samples: Vec<f32> = Vec::new();
-        for result in self.synthesize_parallel(text, output_config)? {
+        for result in self.synthesize_parallel(text, false, output_config)? {
             match result {
                 Ok(ws) => {
                     samples.append(&mut ws.into_vec());
@@ -206,8 +210,8 @@ impl SonataModel for SonataSpeechSynthesizer {
     fn audio_output_info(&self) -> SonataResult<AudioInfo> {
         self.0.audio_output_info()
     }
-    fn phonemize_text(&self, text: &str) -> SonataResult<Phonemes> {
-        self.0.phonemize_text(text)
+    fn phonemize_text(&self, text: &str, is_ssml: bool) -> SonataResult<Phonemes> {
+        self.0.phonemize_text(text, is_ssml)
     }
     fn speak_batch(&self, phoneme_batches: Vec<String>) -> SonataResult<Vec<Audio>> {
         self.0.speak_batch(phoneme_batches)
@@ -249,13 +253,15 @@ impl SonataModel for SonataSpeechSynthesizer {
 struct SpeechSynthesisTaskProvider {
     model: Arc<dyn SonataModel + Sync + Send>,
     text: String,
+    is_ssml: bool,
     output_config: Option<AudioOutputConfig>,
 }
 
 impl SpeechSynthesisTaskProvider {
     fn get_phonemes(&self) -> SonataResult<Phonemes> {
-        self.model.phonemize_text(&self.text)
+        self.model.phonemize_text(&self.text, self.is_ssml)
     }
+
     fn process_one_sentence(&self, start: usize, end: usize, phonemes: String) -> SonataAudioResult {
         let mut wave_samples = self.model.speak_one_sentence(phonemes)?;
         wave_samples.sentence_boundary = Some((start, end));

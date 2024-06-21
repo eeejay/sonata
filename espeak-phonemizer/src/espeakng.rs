@@ -19,7 +19,8 @@ pub const espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL: espeak_AUDIO_OUTPUT = 1;
 
 pub const espeakINITIALIZE_DONT_EXIT: u32 = 32768;
 pub const espeakINITIALIZE_PHONEME_IPA: u32 = 2;
-pub const espeakCHARS_UTF8: u32 = 1;
+pub const espeakCHARS_UTF8: i32 = 1;
+pub const espeakSSML: i32 = 0x10;
 
 extern "C" {
     pub fn espeak_SetVoiceByName(name: *const ::std::os::raw::c_char) -> espeak_ERROR;

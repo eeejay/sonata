@@ -31,27 +31,26 @@ impl fmt::Display for ESpeakError {
 
 static LANG_SWITCH_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\([^)]*\)").unwrap());
 static STRESS_PATTERN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[ˈˌ]").unwrap());
-static ESPEAKNG_INIT: Lazy<ESpeakResult<()>> = Lazy::new(|| {
-    unsafe {
-        let es_sample_rate = espeakng::espeak_Initialize(
-            espeakng::espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL,
-            0,
-            std::ptr::null(),
-            espeakng::espeakINITIALIZE_DONT_EXIT as i32,
-        );
-        if es_sample_rate <= 0 {
-            Err(ESpeakError(format!(
+static ESPEAKNG_INIT: Lazy<ESpeakResult<()>> = Lazy::new(|| unsafe {
+    let es_sample_rate = espeakng::espeak_Initialize(
+        espeakng::espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL,
+        0,
+        std::ptr::null(),
+        espeakng::espeakINITIALIZE_DONT_EXIT as i32,
+    );
+    if es_sample_rate <= 0 {
+        Err(ESpeakError(format!(
                 "Failed to initialize eSpeak-ng. Try setting `ESPEAK_DATA_PATH` environment variable to the directory that contains the `espeak-ng-data` directory.",
             )))
-        } else {
-            Ok(())
-        }
+    } else {
+        Ok(())
     }
 });
 
 pub fn text_to_phonemes(
     text: &str,
     language: &str,
+    is_ssml: bool,
     phoneme_separator: Option<char>,
     remove_lang_switch_flags: bool,
     remove_stress: bool,
@@ -65,6 +64,7 @@ pub fn text_to_phonemes(
             line,
             offset,
             language,
+            is_ssml,
             phoneme_separator,
             remove_lang_switch_flags,
             remove_stress,
@@ -78,6 +78,7 @@ pub fn _text_to_phonemes(
     text: &str,
     text_offset: usize,
     language: &str,
+    is_ssml: bool,
     phoneme_separator: Option<char>,
     remove_lang_switch_flags: bool,
     remove_stress: bool,
@@ -97,6 +98,11 @@ pub fn _text_to_phonemes(
         None => espeakng::espeakINITIALIZE_PHONEME_IPA,
     };
     let phoneme_mode: i32 = calculated_phoneme_mode.try_into().unwrap();
+    let text_mode = if is_ssml {
+        espeakng::espeakCHARS_UTF8 | espeakng::espeakSSML
+    } else {
+        espeakng::espeakCHARS_UTF8
+    };
     let mut sent_phonemes = Vec::new();
     let mut phonemes = String::new();
     let mut text_c_char = rust_string_to_c(text) as *const ffi::c_char;
@@ -117,7 +123,7 @@ pub fn _text_to_phonemes(
         let ph_str = unsafe {
             let res = espeakng::espeak_TextToPhonemesWithTerminator(
                 text_c_char_ptr,
-                espeakng::espeakCHARS_UTF8.try_into().unwrap(),
+                text_mode,
                 phoneme_mode,
                 terminator_ptr,
             );
@@ -332,6 +338,19 @@ mod tests {
         );
         assert_eq!(phoneme_paragraphs[3], (52, 54, "ænd.".to_string()));
         assert_eq!(phoneme_paragraphs[4], (56, 62, "wˈɛlkʌm.".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_ssml() -> ESpeakResult<()> {
+        let text = "<say-as interpret-as='characters'>hello world</say-as>";
+        let expected = "ˌeɪtʃˌiːˈɛlˌɛlˈoʊ dˌʌbəljˌuːˌoʊˈɑːɹˌɛldˈiː.";
+        let phonemes = text_to_phonemes(text, "en-US", true, None, false, false)?
+            .into_iter()
+            .map(|(_start, _end, p)| p)
+            .collect::<Vec<String>>()
+            .join("");
+        assert_eq!(phonemes, expected);
         Ok(())
     }
 }

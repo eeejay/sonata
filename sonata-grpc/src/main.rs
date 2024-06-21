@@ -114,7 +114,7 @@ impl SonataGrpcService {
         output_config: Option<AudioOutputConfig>,
     ) -> SonataGrpcResult<SonataSpeechStreamLazy> {
         match (self.0.read().unwrap()).get(voice_id) {
-            Some(voice) => Ok(voice.synth_ref().synthesize_lazy(text, output_config)?),
+            Some(voice) => Ok(voice.synth_ref().synthesize_lazy(text, false, output_config)?),
             None => Err(SonataGrpcError::VoiceNotFound(format!(
                 "A voice with the key `{}` has not been loaded",
                 voice_id
@@ -380,7 +380,7 @@ impl SonataGrpc for SonataGrpcService {
         let synth = Arc::clone(&voice.0);
         let (tx, rx) = mpsc::channel(512);
         tokio::task::spawn_blocking(move || {
-            let stream_result = synth.synthesize_streamed(req.text, output_config, 55, 3);
+            let stream_result = synth.synthesize_streamed(req.text, false, output_config, 55, 3);
             let realtime_speech_stream = match stream_result {
                 Ok(stream) => stream,
                 Err(e) => {

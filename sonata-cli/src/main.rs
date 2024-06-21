@@ -141,19 +141,20 @@ fn process_synthesis_request(
     match req.mode.unwrap_or_default() {
         SynthesisMode::Lazy => {
             let stream = synth
-                .synthesize_lazy(req.text, output_config)?
+                .synthesize_lazy(req.text, false, output_config)?
                 .map(|res| res.map(|aud| aud.samples));
             consume_stream(stream)?
         }
         SynthesisMode::Parallel => {
             let stream = synth
-                .synthesize_parallel(req.text, output_config)?
+                .synthesize_parallel(req.text, false, output_config)?
                 .map(|res| res.map(|aud| aud.samples));
             consume_stream(stream)?
         }
         SynthesisMode::Realtime => {
             let stream = synth.synthesize_streamed(
                 req.text,
+                false,
                 output_config,
                 req.chunk_size.unwrap_or(100),
                 req.chunk_padding.unwrap_or(3),

@@ -248,7 +248,7 @@ trait VitsModelCommons {
         phoneme_ids.push(eos_id);
         phoneme_ids
     }
-    fn do_phonemize_text(&self, text: &str) -> SonataResult<Phonemes> {
+    fn do_phonemize_text(&self, text: &str, is_ssml: bool) -> SonataResult<Phonemes> {
         let config = self.get_config();
         let text = if config.espeak.voice == "ar" {
             let diacritized = self.diacritize_text(text)?;
@@ -256,7 +256,7 @@ trait VitsModelCommons {
         } else {
             Cow::from(text)
         };
-        let phonemes = match text_to_phonemes(&text, &config.espeak.voice, None, true, false) {
+        let phonemes = match text_to_phonemes(&text, &config.espeak.voice, is_ssml, None, true, false) {
             Ok(ph) => ph,
             Err(e) => {
                 return Err(SonataError::PhonemizationError(format!(
@@ -427,8 +427,8 @@ impl VitsModelCommons for VitsModel {
 }
 
 impl SonataModel for VitsModel {
-    fn phonemize_text(&self, text: &str) -> SonataResult<Phonemes> {
-        self.do_phonemize_text(text)
+    fn phonemize_text(&self, text: &str, is_ssml: bool) -> SonataResult<Phonemes> {
+        self.do_phonemize_text(text, is_ssml)
     }
 
     fn speak_batch(&self, phoneme_batches: Vec<String>) -> SonataResult<Vec<Audio>> {
@@ -608,8 +608,8 @@ impl VitsModelCommons for VitsStreamingModel {
 }
 
 impl SonataModel for VitsStreamingModel {
-    fn phonemize_text(&self, text: &str) -> SonataResult<Phonemes> {
-        self.do_phonemize_text(text)
+    fn phonemize_text(&self, text: &str, is_ssml: bool) -> SonataResult<Phonemes> {
+        self.do_phonemize_text(text, is_ssml)
     }
 
     fn speak_batch(&self, phoneme_batches: Vec<String>) -> SonataResult<Vec<Audio>> {
