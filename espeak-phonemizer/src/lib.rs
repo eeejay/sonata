@@ -1,4 +1,3 @@
-#![feature(ptr_sub_ptr)]
 #![feature(str_lines_remainder)]
 
 mod espeakng;
@@ -147,7 +146,7 @@ pub fn _text_to_phonemes(
             end = if !text_c_char.is_null() {
                 unsafe {
                     // text_c_char = text_c_char.sub(1);
-                    text_c_char.sub_ptr(text_c_char_prev) + start
+                    start + <isize as TryInto<usize>>::try_into(text_c_char.offset_from(text_c_char_prev)).unwrap()
                 }
             } else {
                 text.len()
